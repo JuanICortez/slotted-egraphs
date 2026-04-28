@@ -10,6 +10,9 @@ pub use lambda::*;
 mod rise;
 pub use rise::*;
 
+mod c_subset;
+pub use c_subset::*;
+
 mod var;
 pub use var::*;
 
