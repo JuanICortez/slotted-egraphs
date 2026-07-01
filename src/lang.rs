@@ -210,6 +210,90 @@ impl<L: LanguageChildren> LanguageChildren for Bind<L> {
 
 // TODO: add LanguageChildren definition for tuples.
 
+// --------- Added MultiBind ---------
+
+#[derive(Hash, PartialEq, Eq, Debug, Clone, PartialOrd, Ord)]
+pub struct MultiBind<T> {
+    pub slots: Vec<Slot>,
+    pub elem: T
+}
+
+impl <L: LanguageChildren> LanguageChildren for MultiBind<L> {
+    
+    fn all_slot_occurrences_iter(&self) -> impl Iterator<Item = &Slot> {
+        self.slots
+            .iter()
+            .chain(self.elem.all_slot_occurrences_iter())
+    }
+
+    fn all_slot_occurrences_iter_mut(&mut self) -> impl Iterator<Item = &mut Slot> {
+        self.slots
+            .iter_mut()
+            .chain(self.elem.all_slot_occurrences_iter_mut())
+    }
+
+    fn public_slot_occurrences_iter(&self) -> impl Iterator<Item = &Slot> {
+        let bound: Vec<Slot> = self.slots.clone();
+        self.elem
+            .public_slot_occurrences_iter()
+            .filter(move |s| !bound.contains(s))
+    }
+
+    fn public_slot_occurrences_iter_mut(&mut self) -> impl Iterator<Item = &mut Slot> {
+        let bound = self.slots.clone();
+        self.elem
+            .public_slot_occurrences_iter_mut()
+            .filter(move |s| !bound.contains(*s))
+    }
+
+    fn applied_id_occurrences_iter(&self) -> impl Iterator<Item = &AppliedId> {
+        self.elem.applied_id_occurrences_iter()
+    }
+
+    fn applied_id_occurrences_iter_mut(&mut self) -> impl Iterator<Item = &mut AppliedId> {
+        self.elem.applied_id_occurrences_iter_mut()
+    }
+
+    fn to_syntax(&self) -> Vec<SyntaxElem> {
+        let mut v: Vec<SyntaxElem> = self.slots.iter().map(|s| SyntaxElem::Slot(*s)).collect();
+        v.extend(self.elem.to_syntax());
+        v
+    }
+
+    fn from_syntax(elems: &[SyntaxElem]) -> Option<Self> {
+        let mut slots = Vec::new();
+        let mut i = 0;
+        while i < elems.len() {
+            if let SyntaxElem::Slot(s) = &elems[i] {
+                slots.push(*s);
+                i += 1;
+            } else {
+                break;
+            }
+        }
+        let elem = L::from_syntax(&elems[i..])?;
+        Some(MultiBind { slots, elem })
+    }
+
+    fn weak_shape_impl(&mut self, m: &mut (SlotMap, u32)) {
+        let originals: Vec<Slot> = self.slots.clone();
+
+        for slot in self.slots.iter_mut() {
+            let fresh = Slot::numeric(m.1);
+            m.1 += 1;
+            m.0.insert(*slot, fresh);
+            *slot = fresh;
+        }
+
+        self.elem.weak_shape_impl(m);
+        for s in originals {
+            m.0.remove(s);
+        }
+    }
+}
+
+// ----------------------------------
+
 /// A trait to define your Language (i.e. your E-Node type).
 pub trait Language: Debug + Clone + Hash + Eq + Ord {
     /// List the mutable references of all child [Slot]s in your E-Node, in order of occurrence.

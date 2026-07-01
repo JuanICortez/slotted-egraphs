@@ -71,3 +71,6 @@ use group::*;
 
 mod run;
 pub use run::*;
+
+mod search;
+pub use search::*;
