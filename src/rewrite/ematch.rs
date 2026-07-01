@@ -27,6 +27,27 @@ pub fn ematch_all<L: Language, N: Analysis<L>>(
     out
 }
 
+// ----- Added ematch_all_with_roots -----
+
+pub fn ematch_all_with_roots<L: Language, N: Analysis<L>>(
+    eg: &EGraph<L, N>,
+    pattern: &Pattern<L>,
+) -> Vec<(AppliedId, Subst)> {
+    let mut out = Vec::new();
+    for i in eg.ids() {
+        let root = eg.mk_sem_identity_applied_id(i);
+        out.extend(
+            ematch_impl(pattern, State::default(), root.clone(), eg)
+                .into_iter()
+                .map(final_subst)
+                .map(|subst| (root.clone(), subst)),
+        )
+    }
+    out
+}
+
+// ----- Added ematch_all_with_roots -----
+
 // `i` uses egraph slots instead of pattern slots.
 fn ematch_impl<L: Language, N: Analysis<L>>(
     pattern: &Pattern<L>,
