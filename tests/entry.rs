@@ -24,6 +24,12 @@ pub use array::*;
 
 mod misc;
 
+mod multibind;
+pub use multibind::*;
+
+mod search;
+pub use search::*;
+
 pub fn singleton_set<T: Eq + Hash + Ord>(t: T) -> SmallHashSet<T> {
     [t].into_iter().collect()
 }
