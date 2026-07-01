@@ -27,6 +27,18 @@ pub fn ematch_all<L: Language, N: Analysis<L>>(
     out
 }
 
+pub(crate) fn ematch_eclass<L: Language, N: Analysis<L>>(
+    eg: &EGraph<L, N>,
+    pattern: &Pattern<L>,
+    id: Id,
+) -> Vec<Subst> {
+    let i = eg.mk_sem_identity_applied_id(id);
+    ematch_impl(pattern, State::default(), i, eg)
+        .into_iter()
+        .map(final_subst)
+        .collect()
+}
+
 // ----- Added ematch_all_with_roots -----
 
 pub fn ematch_all_with_roots<L: Language, N: Analysis<L>>(

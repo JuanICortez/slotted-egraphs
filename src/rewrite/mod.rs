@@ -10,6 +10,9 @@ pub use pattern::*;
 mod subst_method;
 pub use subst_method::*;
 
+mod searcher_applier;
+pub use searcher_applier::*;
+
 /// An equational rewrite rule.
 pub struct Rewrite<L: Language, N: Analysis<L> = ()> {
     pub(crate) searcher: Box<dyn Fn(&EGraph<L, N>) -> Box<dyn Any>>,
@@ -59,6 +62,27 @@ pub fn apply_rewrites<L: Language, N: Analysis<L>>(
 }
 
 impl<L: Language + 'static, N: Analysis<L> + 'static> Rewrite<L, N> {
+    /// Build a rewrite from any [`Searcher`] / [`Applier`] pair.
+    ///
+    /// The match type `M` must unify between the two: the searcher produces
+    /// `Vec<M>` and the applier consumes it. For the common pattern-based case
+    /// `M = Subst` and you can use [`PatternApplier`] directly; for custom
+    /// matchers (e.g. containment search) you supply your own types.
+    pub fn from_parts<S, A, M>(searcher: S, applier: A) -> Self
+    where
+        S: Searcher<L, N, Match = M> + 'static,
+        A: Applier<L, N, Match = M> + 'static,
+        M: 'static,
+    {
+        RewriteT::<L, N, Vec<M>> {
+            searcher: Box::new(move |eg| searcher.search(eg)),
+            applier: Box::new(move |matches, eg| {
+                applier.apply(eg, matches);
+            }),
+        }
+        .into()
+    }
+
     /// Create a rewrite rule by specifing a left- and right-hand side of your equation.
     pub fn new(rule: &str, a: &str, b: &str) -> Self {
         Self::new_if(rule, a, b, |_, _| true)
@@ -100,7 +124,7 @@ impl<L: Language + 'static, N: Analysis<L> + 'static> Rewrite<L, N> {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 /// A Progress Measure to check saturation of an e-graph with.
 pub struct ProgressMeasure {
     /// How many classes that were allocated in this e-graph. This measure is strictly growing.

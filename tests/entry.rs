@@ -30,6 +30,8 @@ pub use multibind::*;
 mod search;
 pub use search::*;
 
+mod searcher_applier;
+
 pub fn singleton_set<T: Eq + Hash + Ord>(t: T) -> SmallHashSet<T> {
     [t].into_iter().collect()
 }
